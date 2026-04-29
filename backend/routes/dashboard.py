@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from typing import List
 from database import get_db, User, Purchase
@@ -11,25 +11,41 @@ router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
 
 @router.get("/", response_model=DashboardResponse)
 def get_dashboard(
-    current_user: User  = Depends(get_current_user),
+    current_user: User    = Depends(get_current_user),
     db          : Session = Depends(get_db)
 ):
-    purchases = db.query(Purchase).filter(Purchase.customer_id == current_user.customer_id).all()
+    purchases      = db.query(Purchase).filter(Purchase.customer_id == current_user.customer_id).all()
+    purchase_count = len(purchases)
 
-    # ── New User: no purchase history ────────────────────────────
-    if not purchases:
+    # New User
+    if purchase_count == 0:
         return DashboardResponse(
-            customer_id      = current_user.customer_id,
-            username         = current_user.username,
-            is_new_user      = True,
-            cluster_id       = None,
-            cluster_name     = None,
-            message          = "Welcome! Start shopping to get personalized recommendations.",
-            recommendations  = [],
-            purchase_count   = 0
+            customer_id     = current_user.customer_id,
+            username        = current_user.username,
+            is_new_user     = True,
+            cluster_id      = None,
+            cluster_name    = None,
+            message         = "Welcome! Start shopping to get personalized recommendations.",
+            recommendations = [],
+            purchase_count  = 0
         )
 
-    # ── Existing User: cluster + recommend ───────────────────────
+    purchased_codes = [p.stock_code for p in purchases]
+
+    # Not enough purchases to cluster
+    if purchase_count < 3:
+        return DashboardResponse(
+            customer_id     = current_user.customer_id,
+            username        = current_user.username,
+            is_new_user     = False,
+            cluster_id      = None,
+            cluster_name    = None,
+            message         = f"Welcome back! Buy {3 - purchase_count} more item(s) to unlock your personalized profile.",
+            recommendations = [],
+            purchase_count  = purchase_count
+        )
+
+    # Build purchase dicts for ML
     purchase_dicts = [
         {
             "stock_code"   : p.stock_code,
@@ -41,27 +57,30 @@ def get_dashboard(
         for p in purchases
     ]
 
-    # Predict cluster using pkl files
-    cluster_id   = predict_cluster(purchase_dicts)
-    cluster_name = get_cluster_name(cluster_id)
-
-    # Update cluster in DB
-    current_user.cluster_id = cluster_id
-    db.commit()
-
-    # Get recommendations from pkl files
-    purchased_codes = [p.stock_code for p in purchases]
-    recs = get_recommendations(current_user.customer_id, cluster_id, purchased_codes)
+    # Cluster + Recommend
+    try:
+        cluster_id   = predict_cluster(purchase_dicts)
+        cluster_name = get_cluster_name(cluster_id)
+        current_user.cluster_id = cluster_id
+        db.commit()
+        recs    = get_recommendations(current_user.customer_id, cluster_id, purchased_codes)
+        message = f"Welcome back! You are a {cluster_name}."
+    except Exception as e:
+        print(f"[Clustering Error] {e}")
+        cluster_id   = None
+        cluster_name = None
+        recs         = []
+        message      = "Welcome back! We're still analyzing your profile."
 
     return DashboardResponse(
-        customer_id      = current_user.customer_id,
-        username         = current_user.username,
-        is_new_user      = False,
-        cluster_id       = cluster_id,
-        cluster_name     = cluster_name,
-        message          = f"Welcome back! You are a {cluster_name}.",
-        recommendations  = [ProductRec(**r) for r in recs],
-        purchase_count   = len(purchases)
+        customer_id     = current_user.customer_id,
+        username        = current_user.username,
+        is_new_user     = False,
+        cluster_id      = cluster_id,
+        cluster_name    = cluster_name,
+        message         = message,
+        recommendations = [ProductRec(**r) for r in recs],
+        purchase_count  = purchase_count
     )
 
 
@@ -71,7 +90,6 @@ def add_purchase(
     current_user: User    = Depends(get_current_user),
     db          : Session = Depends(get_db)
 ):
-    """Simulate a customer making a purchase"""
     purchase = Purchase(
         customer_id  = current_user.customer_id,
         stock_code   = payload.stock_code,
@@ -90,5 +108,4 @@ def get_purchases(
     current_user: User    = Depends(get_current_user),
     db          : Session = Depends(get_db)
 ):
-    """Get all purchases for current user"""
     return db.query(Purchase).filter(Purchase.customer_id == current_user.customer_id).all()
