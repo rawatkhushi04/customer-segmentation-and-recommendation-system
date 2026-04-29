@@ -28,7 +28,7 @@ CLUSTER_NAMES = {
     1: "Occasional Big Spender",
     2: "Eager Early-Bird Shopper"
 }
-
+print(f"Scaler expects: {list(scaler.feature_names_in_)}")
 print("✓ All ML models loaded successfully")
 
 
@@ -90,6 +90,7 @@ def compute_features(purchases: List[dict]) -> pd.DataFrame:
         "Avg_Days_Between_Purchases": avg_days_between,
         "Day_Of_Week"               : fav_day,
         "Hour"                      : fav_hour,
+        "Is_UK"                     : 1,
         "Cancellation_Frequency"    : cancel_freq,
         "Cancellation_Rate"         : cancel_rate,
         "Monthly_Spending_Mean"     : monthly_mean,
@@ -100,21 +101,38 @@ def compute_features(purchases: List[dict]) -> pd.DataFrame:
     return features
 
 
+SCALE_ONLY_COLS = [
+    'Average_Transaction_Value',
+    'Avg_Days_Between_Purchases',
+    'Cancellation_Frequency',
+    'Cancellation_Rate',
+    'Days_Since_Last_Purchase',
+    'Hour',
+    'Monthly_Spending_Mean',
+    'Monthly_Spending_Std',
+    'Spending_Trend',
+    'Total_Products_Purchased',
+    'Total_Spend',
+    'Total_Transactions',
+]
+
 def predict_cluster(purchases: List[dict]) -> int:
-    """Given purchase history, return cluster id"""
     features = compute_features(purchases)
 
-    # Exclude non-scaled cols (match training)
-    cols_to_exclude = ["Day_Of_Week"]
-    cols_to_scale   = [c for c in features.columns if c not in cols_to_exclude]
+    # Step 1: scale only the 12 cols scaler knows
+    scaled_12 = scaler.transform(features[SCALE_ONLY_COLS].to_numpy())
 
-    features_scaled              = features.copy()
-    features_scaled[cols_to_scale] = scaler.transform(features[cols_to_scale])
+    # Step 2: append Day_Of_Week and Is_UK (unscaled) to get 14 cols for PCA
+    day_of_week = features[['Day_Of_Week']].to_numpy()
+    is_uk       = features[['Is_UK']].to_numpy()
+    full_14     = np.hstack([scaled_12, day_of_week, is_uk])
 
-    features_pca = pca.transform(features_scaled)
-    cluster      = int(kmeans.predict(features_pca)[0])
+    # Step 3: PCA + KMeans
+    pca_array = pca.transform(full_14)
+    cluster   = int(kmeans.predict(pca_array)[0])
+
+    print(f"  Cluster assigned: {cluster} ({CLUSTER_NAMES.get(cluster)})")
     return cluster
-
 
 def get_recommendations(customer_id: int, cluster_id: int, purchased_codes: List[str]) -> List[dict]:
     """
