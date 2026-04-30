@@ -48,6 +48,17 @@ class Product(Base):
     country     = Column(String)
 
 
+class ActivityLog(Base):
+    __tablename__ = "activity_logs"
+
+    id         = Column(Integer, primary_key=True, index=True)
+    event_type = Column(String, index=True)   # dashboard_access, model_run, data_upload
+    actor      = Column(String, index=True)   # admin username or system
+    action     = Column(String)
+    details    = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+
 def get_db():
     db = SessionLocal()
     try:

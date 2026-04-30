@@ -1,0 +1,43 @@
+# ----------------------
+
+# ----------------------
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.sqlite3
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# Data files (optional - ignore if large/private)
+backend/data/
+*.csv
+
+# Logs
+*.log
+
+# ----------------------
+# ⚛️ Node / React (Frontend)
+# ----------------------
+node_modules/
+dist/
+build/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+.DS_Store
+Thumbs.db
+
+# VS Code
+.vscode/
+
+
+# ----------------------
+.cache/
+.tmp/

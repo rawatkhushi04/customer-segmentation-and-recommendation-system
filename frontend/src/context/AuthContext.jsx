@@ -20,8 +20,15 @@ export function AuthProvider({ children }) {
     localStorage.setItem('user', JSON.stringify({
       customer_id: data.customer_id,
       username:    data.username,
+      role:        data.role || 'user',
+      is_admin:    !!data.is_admin,
     }))
-    setUser({ customer_id: data.customer_id, username: data.username })
+    setUser({
+      customer_id: data.customer_id,
+      username: data.username,
+      role: data.role || 'user',
+      is_admin: !!data.is_admin,
+    })
     return data
   }
 
@@ -31,8 +38,15 @@ export function AuthProvider({ children }) {
     localStorage.setItem('user', JSON.stringify({
       customer_id: data.customer_id,
       username:    data.username,
+      role:        data.role || 'user',
+      is_admin:    !!data.is_admin,
     }))
-    setUser({ customer_id: data.customer_id, username: data.username })
+    setUser({
+      customer_id: data.customer_id,
+      username: data.username,
+      role: data.role || 'user',
+      is_admin: !!data.is_admin,
+    })
     return data
   }
 

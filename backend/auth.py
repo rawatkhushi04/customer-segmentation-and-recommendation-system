@@ -29,25 +29,49 @@ def create_access_token(data: dict) -> str:
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 
-def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(bearer),
-    db: Session = Depends(get_db)
-) -> User:
-    token = credentials.credentials
+def decode_token(token: str) -> dict:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Invalid or expired token. Please login again.",
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
-        payload     = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        customer_id = payload.get("customer_id")
-        if customer_id is None:
-            raise credentials_exception
+        return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
     except JWTError:
         raise credentials_exception
 
+
+def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(bearer),
+    db: Session = Depends(get_db)
+) -> User:
+    token = credentials.credentials
+    payload = decode_token(token)
+    customer_id = payload.get("customer_id")
+    if customer_id is None or payload.get("role") == "admin":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token. Please login again.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
     user = db.query(User).filter(User.customer_id == customer_id).first()
     if user is None:
-        raise credentials_exception
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token. Please login again.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     return user
+
+
+def get_current_admin(
+    credentials: HTTPAuthorizationCredentials = Depends(bearer),
+) -> dict:
+    payload = decode_token(credentials.credentials)
+    if payload.get("role") != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required.",
+        )
+    return payload

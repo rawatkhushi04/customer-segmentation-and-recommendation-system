@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from database import create_tables, SessionLocal, Product
-from routes import auth, dashboard, products
+from database import create_tables, SessionLocal, Product, ActivityLog
+from routes import auth, dashboard, products, admin
 import pandas as pd
 import os
 
@@ -22,6 +22,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(dashboard.router)
 app.include_router(products.router)
+app.include_router(admin.router)
 
 
 def seed_products():
@@ -75,6 +76,15 @@ def seed_products():
             for _, row in products_df.iterrows()
         ]
         db.bulk_save_objects(product_objects)
+        db.commit()
+        db.add(
+            ActivityLog(
+                event_type="data_upload",
+                actor="system",
+                action="Seeded products from CSV",
+                details=f"file={csv_path}, records={len(product_objects)}",
+            )
+        )
         db.commit()
         print(f"✓ Seeded {len(product_objects)} unique products from data.csv")
 

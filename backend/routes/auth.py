@@ -6,6 +6,8 @@ from schemas import RegisterRequest, LoginRequest, TokenResponse
 import random
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
+ADMIN_EMAIL = "admin@test.com"
+ADMIN_PASSWORD = "123456"
 
 
 def generate_customer_id(db: Session) -> int:
@@ -37,14 +39,36 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)):
     db.refresh(user)
 
     token = create_access_token({"customer_id": customer_id, "username": payload.username})
-    return TokenResponse(access_token=token, customer_id=customer_id, username=payload.username)
+    return TokenResponse(
+        access_token=token,
+        customer_id=customer_id,
+        username=payload.username,
+        role="user",
+        is_admin=False,
+    )
 
 
 @router.post("/login", response_model=TokenResponse)
 def login(payload: LoginRequest, db: Session = Depends(get_db)):
+    if payload.email == ADMIN_EMAIL and payload.password == ADMIN_PASSWORD:
+        token = create_access_token({"customer_id": 0, "username": "admin", "role": "admin"})
+        return TokenResponse(
+            access_token=token,
+            customer_id=0,
+            username="admin",
+            role="admin",
+            is_admin=True,
+        )
+
     user = db.query(User).filter(User.email == payload.email).first()
     if not user or not verify_password(payload.password, user.password):
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
-    token = create_access_token({"customer_id": user.customer_id, "username": user.username})
-    return TokenResponse(access_token=token, customer_id=user.customer_id, username=user.username)
+    token = create_access_token({"customer_id": user.customer_id, "username": user.username, "role": "user"})
+    return TokenResponse(
+        access_token=token,
+        customer_id=user.customer_id,
+        username=user.username,
+        role="user",
+        is_admin=False,
+    )

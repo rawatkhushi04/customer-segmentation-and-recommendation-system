@@ -25,35 +25,39 @@ export default function Navbar({ onOrdersClick }) {
 
         {user && (
           <div className="flex items-center gap-3">
-            {/* Customer ID */}
+            {/* Customer/Admin ID */}
             <div className="text-right hidden sm:block">
-              <p className="text-xs text-dim font-mono">CUSTOMER ID</p>
-              <p className="text-sm font-mono text-accent">#{user.customer_id}</p>
+              <p className="text-xs text-dim font-mono">{user.role === 'admin' ? 'ROLE' : 'CUSTOMER ID'}</p>
+              <p className="text-sm font-mono text-accent">{user.role === 'admin' ? 'ADMIN' : `#${user.customer_id}`}</p>
             </div>
             <div className="w-px h-8 bg-border" />
 
-            {/* Orders button */}
-            <button
-              onClick={onOrdersClick}
-              className="flex items-center gap-2 px-3 py-1.5 border border-border rounded-xl hover:border-accent/40 transition-all group"
-            >
-              <span className="text-base">📦</span>
-              <span className="text-sm text-dim group-hover:text-text transition-colors hidden sm:block">Orders</span>
-            </button>
+            {user.role !== 'admin' && (
+              <>
+                {/* Orders button */}
+                <button
+                  onClick={onOrdersClick}
+                  className="flex items-center gap-2 px-3 py-1.5 border border-border rounded-xl hover:border-accent/40 transition-all group"
+                >
+                  <span className="text-base">📦</span>
+                  <span className="text-sm text-dim group-hover:text-text transition-colors hidden sm:block">Orders</span>
+                </button>
 
-            {/* Cart button */}
-            <button
-              onClick={() => setIsOpen(true)}
-              className="relative flex items-center gap-2 px-3 py-1.5 border border-border rounded-xl hover:border-accent/40 transition-all group"
-            >
-              <span className="text-base">🛒</span>
-              <span className="text-sm text-dim group-hover:text-text transition-colors hidden sm:block">Cart</span>
-              {totalItems > 0 && (
-                <span className="absolute -top-2 -right-2 w-5 h-5 bg-accent text-white text-xs font-mono rounded-full flex items-center justify-center shadow-glow">
-                  {totalItems}
-                </span>
-              )}
-            </button>
+                {/* Cart button */}
+                <button
+                  onClick={() => setIsOpen(true)}
+                  className="relative flex items-center gap-2 px-3 py-1.5 border border-border rounded-xl hover:border-accent/40 transition-all group"
+                >
+                  <span className="text-base">🛒</span>
+                  <span className="text-sm text-dim group-hover:text-text transition-colors hidden sm:block">Cart</span>
+                  {totalItems > 0 && (
+                    <span className="absolute -top-2 -right-2 w-5 h-5 bg-accent text-white text-xs font-mono rounded-full flex items-center justify-center shadow-glow">
+                      {totalItems}
+                    </span>
+                  )}
+                </button>
+              </>
+            )}
 
             <div className="w-px h-8 bg-border" />
             <span className="text-sm text-dim hidden sm:block">{user.username}</span>
