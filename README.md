@@ -111,7 +111,7 @@ A user is assigned a cluster after accumulating **at least 3 purchases**. The cl
 
 ### Prerequisites
 
-- Python 3.10+
+- Python 3.11
 - Node.js 18+
 
 ### 1. Clone the repository
