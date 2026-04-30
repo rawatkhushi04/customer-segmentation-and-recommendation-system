@@ -2,10 +2,10 @@ import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'
 import { useNavigate } from 'react-router-dom'
 
-export default function Navbar() {
-  const { user, logout }    = useAuth()
+export default function Navbar({ onOrdersClick }) {
+  const { user, logout }          = useAuth()
   const { totalItems, setIsOpen } = useCart()
-  const navigate            = useNavigate()
+  const navigate                  = useNavigate()
 
   const handleLogout = () => { logout(); navigate('/login') }
 
@@ -31,6 +31,15 @@ export default function Navbar() {
               <p className="text-sm font-mono text-accent">#{user.customer_id}</p>
             </div>
             <div className="w-px h-8 bg-border" />
+
+            {/* Orders button */}
+            <button
+              onClick={onOrdersClick}
+              className="flex items-center gap-2 px-3 py-1.5 border border-border rounded-xl hover:border-accent/40 transition-all group"
+            >
+              <span className="text-base">📦</span>
+              <span className="text-sm text-dim group-hover:text-text transition-colors hidden sm:block">Orders</span>
+            </button>
 
             {/* Cart button */}
             <button

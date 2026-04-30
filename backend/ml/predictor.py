@@ -150,7 +150,7 @@ def get_recommendations(customer_id: int, cluster_id: int, purchased_codes: List
     # Case 2: new customer or no recs → use cluster top products
     cluster_recs = cluster_top_products.get(cluster_id, [])
     recs = [r for r in cluster_recs if r.get("StockCode") not in purchased_codes and r.get("StockCode")]
-    return recs[:3]
+    return recs[:10]
 
 
 def get_cluster_name(cluster_id: int) -> str:

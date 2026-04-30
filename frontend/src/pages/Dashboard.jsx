@@ -4,45 +4,42 @@ import Navbar from '../components/Navbar'
 import ClusterBadge from '../components/ClusterBadge'
 import ProductCard from '../components/ProductCard'
 import CartSidebar from '../components/CartSidebar'
+import OrdersSidebar from '../components/OrdersSidebar'
 import api from '../api/axios'
 
 export default function Dashboard() {
-  const { user }                  = useAuth()
-  const [data, setData]           = useState(null)
-  const [loading, setLoading]     = useState(true)
-  const [error, setError]         = useState('')
-  const [products, setProducts]   = useState([])
-  const [search, setSearch]       = useState('')
-  const [searching, setSearching] = useState(false)
+  const { user }                        = useAuth()
+  const [data, setData]                 = useState(null)
+  const [loading, setLoading]           = useState(true)
+  const [products, setProducts]         = useState([])
+  const [search, setSearch]             = useState('')
+  const [sortBy, setSortBy]             = useState('default')
+  const [searching, setSearching]       = useState(false)
+  const [ordersOpen, setOrdersOpen]     = useState(false)
 
   const fetchDashboard = useCallback(async () => {
     try {
       const res = await api.get('/dashboard/')
       setData(res.data)
-    } catch {
-      setError('Failed to load dashboard.')
-    } finally {
-      setLoading(false)
-    }
+    } catch { /* silent */ }
+    finally { setLoading(false) }
   }, [])
 
   useEffect(() => { fetchDashboard() }, [fetchDashboard])
 
-  // Search products with debounce
   useEffect(() => {
     const fetchProducts = async () => {
       setSearching(true)
       try {
-        const res = await api.get(`/products/?search=${search}&limit=12`)
+        const res = await api.get(`/products/?search=${encodeURIComponent(search)}&limit=50&sort_by=${sortBy}`)
         setProducts(res.data)
       } catch { /* silent */ }
       finally { setSearching(false) }
     }
     const t = setTimeout(fetchProducts, 400)
     return () => clearTimeout(t)
-  }, [search])
+  }, [search, sortBy])
 
-  // Called after successful checkout → re-fetch dashboard for new cluster/recs
   const handleCheckoutComplete = () => {
     setLoading(true)
     fetchDashboard()
@@ -59,8 +56,9 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-bg grid-bg">
-      <Navbar />
+      <Navbar onOrdersClick={() => setOrdersOpen(true)} />
       <CartSidebar onCheckoutComplete={handleCheckoutComplete} />
+      <OrdersSidebar isOpen={ordersOpen} onClose={() => setOrdersOpen(false)} />
 
       <main className="max-w-7xl mx-auto px-6 pt-24 pb-16">
 
@@ -131,17 +129,33 @@ export default function Dashboard() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div>
               <p className="text-xs font-mono text-dim uppercase tracking-widest mb-1">Catalog</p>
-              <h2 className="font-display font-bold text-2xl text-text">All Products</h2>
+              <h2 className="font-display font-bold text-2xl text-text">
+                All Products
+                <span className="ml-3 text-sm font-mono text-dim font-normal">({products.length})</span>
+              </h2>
             </div>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-dim text-sm">🔍</span>
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search products..."
-                className="bg-card border border-border rounded-xl pl-9 pr-4 py-2.5 text-sm text-text font-body placeholder:text-muted w-full sm:w-64 transition-all hover:border-accent/40"
-              />
+
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-dim text-sm">🔍</span>
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search products..."
+                  className="bg-card border border-border rounded-xl pl-9 pr-4 py-2.5 text-sm text-text font-body placeholder:text-muted w-full sm:w-52 transition-all hover:border-accent/40"
+                />
+              </div>
+
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="bg-card border border-border rounded-xl px-4 py-2.5 text-sm text-text font-body transition-all hover:border-accent/40 cursor-pointer"
+              >
+                <option value="default">Default</option>
+                <option value="price_high">Price: High → Low</option>
+                <option value="price_low">Price: Low → High</option>
+              </select>
             </div>
           </div>
 
